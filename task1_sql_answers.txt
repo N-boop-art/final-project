@@ -1,0 +1,127 @@
+Task 1: Data Gathering and Combination - Answers & Reflection
+
+Question 1: How much is each member borrowing?
+(Goal: Per-member count of checkouts, including those with 0 checkouts)
+
+SQL Query:
+SELECT m.member_id, m.first_name, m.last_name, COUNT(c.checkout_id) as total_checkouts
+FROM members m
+LEFT JOIN checkouts c ON m.member_id = c.member_id
+GROUP BY m.member_id;
+
+Reasoning: 
+I used a LEFT JOIN here instead of a regular JOIN. This way, we don't lose members who haven't borrowed anything yet; they just show up with a total_checkouts count of 0.
+
+Result:
+    member_id first_name last_name  total_checkouts
+0        1001      Salma   Ibrahim                1
+1        1002      Fares     Saleh                2
+2        1003     Bassel    Hegazy                9
+3        1004      Fares     Wahba                0
+4        1005    Youssef     Halim                3
+..        ...        ...       ...              ...
+75       1076       Dina     Wahba                7
+76       1077       Lina    Rashad                6
+77       1078     Habiba     Osman                0
+78       1079       Rana     Osman               10
+79       1080     Bassel     Wahba                2
+[80 rows x 4 columns]
+
+
+Question 2: Which books match a chosen author pattern?
+(Goal: Search the catalog based on a specific author pattern)
+
+SQL Query:
+SELECT * FROM books WHERE author LIKE '%Aya%';
+
+Reasoning: 
+Using the LIKE operator with the '%' wildcard before and after "Aya" lets the query catch any author name containing that word, no matter what comes before or after it.
+
+Result:
+   book_id                title     author
+0      505  Letters to the Nile  Aya Hafez
+1      506  The Paper Boat Club  Aya Hafez
+
+
+Question 3: What are the most popular books?
+(Goal: Top 5 most-borrowed titles)
+
+SQL Query:
+SELECT b.title, COUNT(c.checkout_id) as checkouts
+FROM checkouts c
+JOIN books b ON c.book_id = b.book_id
+GROUP BY b.book_id
+ORDER BY checkouts DESC
+LIMIT 5;
+
+Reasoning: 
+I joined the checkouts and books tables, grouped them by book_id to count how many times each book was borrowed, and then sorted the results in descending order to easily grab the top 5.
+
+Result:
+                    title  checkouts
+0         The Silver Kite         57
+1   Fossils and Fireflies         55
+2  Circuits for Beginners         46
+3        Kites Over Cairo         38
+4    Storms and Sailboats         25
+
+
+Question 4: Who are the most active readers?
+(Goal: Top 10 members with the most checkouts)
+
+SQL Query:
+SELECT m.first_name, m.last_name, COUNT(c.checkout_id) as checkouts
+FROM checkouts c 
+JOIN members m ON c.member_id = m.member_id
+GROUP BY m.member_id 
+ORDER BY checkouts DESC 
+LIMIT 10;
+
+Reasoning: 
+The logic is pretty similar to the previous question, but this time I joined with the members table, grouped by member_id to get the checkout count per person, and limited the output to the top 10.
+
+Result:
+   first_name last_name  checkouts
+0        Aya     Wahba         25
+1     Sherif     Saleh         21
+2       Ziad     Saleh         19
+3    Mostafa     Fouad         18
+4       Nour     Nabil         18
+5       Adam     Fahmy         17
+6    Youssef    Hegazy         17
+7      Ahmed    Shafik         17
+8       Sara    Rashad         16
+9       Reem     Osman         16
+
+
+Question 5: What does a neighborhood's activity look like further back in time?
+(Goal: Maadi checkouts, newest to oldest, skipping the first 10)
+
+SQL Query & Python Code:
+SELECT c.*, m.neighborhood
+FROM checkouts c
+JOIN members m ON c.member_id = m.member_id
+WHERE m.neighborhood = 'Maadi'
+ORDER BY c.checkout_date DESC;
+
+(In Python: I applied `res_q5.iloc[10:]` to the dataframe)
+
+Reasoning: 
+I used SQL to filter for the 'Maadi' neighborhood and sort the dates so the newest ones appear first. Then, instead of complicating the SQL query, I just used Pandas slicing (`.iloc[10:]`) in Python to chop off the first 10 recent checkouts.
+
+Result:
+    checkout_id  member_id  book_id checkout_date return_date neighborhood
+10         9103       1003      513    2025-09-04  2025-09-25        Maadi
+11         9081       1017      502    2025-08-25  2025-09-17        Maadi
+12         9001       1008      501    2025-08-23  2025-08-28        Maadi
+13         9050       1003      521    2025-08-21         NaN        Maadi
+14         9085       1018      525    2025-08-19  2025-09-18        Maadi
+
+
+Reflection: Web Page (HTML) vs. Database / API Data Sources
+
+Working with the HTML data from the Reading Kickoff page was a totally different experience compared to querying the SQLite database or parsing the JSON file. Databases and APIs are built for computers—they give you clean, structured data that follows strict rules. Web pages, on the other hand, are just built to look good for humans, so the data is usually messy and tied up in formatting.
+
+This difference became really obvious during the project. Every row from our database checkout logs had a predictable structure. But the HTML table we scraped was missing the 'return_date' column entirely and had completely different column headers. 
+
+Because the main goal was to create one unified dataset, I couldn't just stack the HTML data on top of the DB data. I had to manually reshape it in Python first—renaming the columns and injecting empty 'return_date' values so the structures would actually match. It really highlighted how scraping web data always requires an extra step of cleaning and mapping before you can do anything useful with it.
